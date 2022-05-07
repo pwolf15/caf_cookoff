@@ -19,13 +19,33 @@ std::vector<std::complex<float>> read_complex(std::string filename)
   return data;
 };
 
+std::vector<std::complex<float>> apply_fdoa(std::vector<std::complex<float>> ray, float fdoa, float sample_rate)
+{
+  std::complex<float> precache(0,2*3.14159265*fdoa/sample_rate);
+  std::vector<std::complex<float>> new_ray(ray.size());
+  for (size_t i = 0; i < new_ray.size(); ++i)
+  {
+    new_ray[i] = ray[i] * std::exp(precache*std::complex<float>(i,i));
+  }
+
+  return new_ray;
+}
+
 std::vector<float> amb_surf(
-  std::vector<std::complex<float>>& needle_samples,
-  std::vector<std::complex<float>>& haystack_samples, 
-  std::vector<float>& freq_offsets,
+  std::vector<std::complex<float>>& needle,
+  std::vector<std::complex<float>>& haystack, 
+  std::vector<float>& freqs_hz,
   float sample_rate)
 {
-  std::vector<float> surf;
+  uint32_t len_needle = needle.size();
+  uint32_t len_haystack = haystack.size();
+  uint32_t len_freqs = freqs_hz.size();
+  std::vector<float> surf(len_freqs*len_needle);
+  for (size_t i = 0; i < len_freqs; ++i)
+  {
+    std::vector<std::complex<float>> shifted = apply_fdoa(needle, freqs_hz[i], sample_rate);
+  }
+  
 
   return surf;
 }

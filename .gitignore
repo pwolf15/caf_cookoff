@@ -5,3 +5,4 @@ caf_go/caf
 caf_rust/target/
 data/
 grc/*.py
+caf_cpp/build
