@@ -8,41 +8,42 @@
 #include <math.h>
 #include "fftw3.h"
 
+// https://github.com/dMaggot/libxcorr/blob/master/src/xcorr.c
 void xcorr(std::vector<std::complex<float>>& signala, 
-  std::vector<std::complex<float>> signalb, 
-  std::vector<std::complex<float>> result, int N)
+  std::vector<std::complex<float>>& signalb, 
+  std::vector<std::complex<float>>& result, int N)
 {
     std::vector<std::complex<float>> signala_ext(2*N-1), signalb_ext(2*N-1), out_shifted(2*N-1);
     std::vector<std::complex<float>> outa(2*N-1), outb(2*N-1), out(2*N-1);
 
-    fftw_plan pa = fftw_plan_dft_1d(2 * N - 1, reinterpret_cast<fftw_complex*>(signala_ext.data()), reinterpret_cast<fftw_complex*>(outa.data()), FFTW_FORWARD, FFTW_ESTIMATE);
-    fftw_plan pb = fftw_plan_dft_1d(2 * N - 1, reinterpret_cast<fftw_complex*>(signalb_ext.data()), reinterpret_cast<fftw_complex*>(outb.data()), FFTW_FORWARD, FFTW_ESTIMATE);
-    fftw_plan px = fftw_plan_dft_1d(2 * N - 1, reinterpret_cast<fftw_complex*>(out.data()), reinterpret_cast<fftw_complex*>(result.data()), FFTW_BACKWARD, FFTW_ESTIMATE);
+    fftwf_plan pa = fftwf_plan_dft_1d(2 * N - 1, reinterpret_cast<fftwf_complex*>(signala_ext.data()), reinterpret_cast<fftwf_complex*>(outa.data()), FFTW_FORWARD, FFTW_ESTIMATE);
+    fftwf_plan pb = fftwf_plan_dft_1d(2 * N - 1, reinterpret_cast<fftwf_complex*>(signalb_ext.data()), reinterpret_cast<fftwf_complex*>(outb.data()), FFTW_FORWARD, FFTW_ESTIMATE);
+    fftwf_plan px = fftwf_plan_dft_1d(2 * N - 1, reinterpret_cast<fftwf_complex*>(out.data()), reinterpret_cast<fftwf_complex*>(result.data()), FFTW_BACKWARD, FFTW_ESTIMATE);
 
     //zeropadding
-    for (int i = N - 1; i <= N + (N - 1); ++i)
+    for (int i = N - 1; i < N + (N - 1); ++i)
     {
       signala_ext[i] = signala[i - (N - 1)];
     }
-    for (int i = N; i <= N + (N - 1); ++i)
+    for (int i = N; i < N + (N - 1); ++i)
     {
       signalb_ext[i] = signalb[i - N];
     }
 
-    fftw_execute(pa);
-    fftw_execute(pb);
+    fftwf_execute(pa);
+    fftwf_execute(pb);
 
     std::complex<float> scale = 1.0/(2 * N -1);
     for (int i = 0; i < 2 * N - 1; i++)
         out[i] = outa[i] * conj(outb[i]) * scale;
 
-    fftw_execute(px);
+    fftwf_execute(px);
 
-    fftw_destroy_plan(pa);
-    fftw_destroy_plan(pb);
-    fftw_destroy_plan(px);
+    fftwf_destroy_plan(pa);
+    fftwf_destroy_plan(pb);
+    fftwf_destroy_plan(px);
 
-    fftw_cleanup();
+    fftwf_cleanup();
 
     return;
 }
@@ -65,7 +66,7 @@ std::vector<std::complex<float>> apply_fdoa(std::vector<std::complex<float>>& ra
 {
   std::complex<float> precache(0,2*3.141592653589*fdoa/sample_rate);
   std::vector<std::complex<float>> new_ray(ray.size());
-  for (size_t i = 0; i < 10; ++i)
+  for (size_t i = 0; i < ray.size(); ++i)
   {
     new_ray[i] = ray[i] * std::exp(precache*std::complex<float>(i,i));
   }
@@ -78,6 +79,15 @@ std::vector<float> xcor(std::vector<std::complex<float>>& apple, std::vector<std
   std::vector<std::complex<float>> corr(2 * apple.size() - 1);
 
   xcorr(apple, banana, corr, apple.size());
+
+  for (int i = 0; i < corr.size(); ++i)
+  {
+    if (corr[i].real() > 0)
+    {
+      std::cout << "Corr: " << corr[i] << std::endl;
+      break;
+    }
+  }
 
   std::vector<float> amplitudes;
   for (int i = 0; i < corr.size(); ++i)
